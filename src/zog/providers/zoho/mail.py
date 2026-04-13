@@ -174,7 +174,7 @@ def send_message(
         "toAddress": to_address,
         "subject": subject,
         "content": content,
-        "mailFormat": "html" if body_html is not None else "html",
+        "mailFormat": "html" if body_html is not None else "plaintext",
         "askReceipt": "no",
     }
     if cc_address:
