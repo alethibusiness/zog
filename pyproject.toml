@@ -1,0 +1,57 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "zog-cli"
+version = "0.1.0"
+description = "Zoho Mail CLI modeled after gog."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Alethi founders" }]
+keywords = ["cli", "zoho", "mail", "oauth"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Communications :: Email",
+  "Topic :: Utilities",
+]
+dependencies = [
+  "requests>=2.31",
+  "platformdirs>=4",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "pytest-mock>=3.14",
+]
+
+[project.scripts]
+zog = "zog.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/alethi/zog-cli"
+Repository = "https://github.com/alethi/zog-cli"
+Issues = "https://github.com/alethi/zog-cli/issues"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+markers = [
+  "live: exercises the real Zoho API and is skipped in CI",
+]
+

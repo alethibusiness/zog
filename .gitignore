@@ -1,0 +1,15 @@
+.venv/
+.uv_bootstrap/
+.acceptance-config/
+__pycache__/
+.pytest_cache/
+.coverage
+build/
+dist/
+*.egg-info/
+.env
+*.token
+*.pyc
+*.log
+.mypy_cache/
+.ruff_cache/
