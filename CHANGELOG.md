@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.0 - 2026-04-13
+
+- Added `zog calendar` subcommands: `list`, `events list`, `events get`, `events create`.
+- Added `zog contacts` subcommands: `list`, `get`, `create`.
+- Added `zog workdrive` subcommands: `files list`, `files get`, `upload` (stub).
+- Expanded default OAuth scopes to cover Mail, Calendar, Contacts, and WorkDrive.
+- Added `--services` CSV flag to `zog auth add` for scoped authorization.
+- Added mock-based tests for Calendar, Contacts, and WorkDrive providers.
+
 ## 0.1.0 - 2026-04-13
 
 - Initial release of `zog`.

@@ -14,11 +14,50 @@ from zog.config import StoredToken
 from zog.errors import AuthError
 from zog.providers.zoho import endpoints
 
+SERVICE_SCOPES: dict[str, list[str]] = {
+    "mail": [
+        "ZohoMail.messages.ALL",
+        "ZohoMail.accounts.READ",
+        "ZohoMail.folders.READ",
+    ],
+    "calendar": [
+        "ZohoCalendar.calendar.ALL",
+        "ZohoCalendar.event.ALL",
+    ],
+    "contacts": [
+        "ZohoContacts.contactapi.READ",
+        "ZohoContacts.contactapi.ALL",
+    ],
+    "workdrive": [
+        "WorkDrive.files.ALL",
+        "WorkDrive.team.READ",
+    ],
+}
+
 DEFAULT_SCOPES = [
     "ZohoMail.messages.ALL",
     "ZohoMail.accounts.READ",
     "ZohoMail.folders.READ",
+    "ZohoCalendar.calendar.ALL",
+    "ZohoCalendar.event.ALL",
+    "ZohoContacts.contactapi.READ",
+    "ZohoContacts.contactapi.ALL",
+    "WorkDrive.files.ALL",
+    "WorkDrive.team.READ",
 ]
+
+
+def scopes_for_services(services: Sequence[str]) -> list[str]:
+    """Return OAuth scopes for the requested services."""
+
+    scopes: list[str] = []
+    seen: set[str] = set()
+    for service in services:
+        for scope in SERVICE_SCOPES.get(service, []):
+            if scope not in seen:
+                seen.add(scope)
+                scopes.append(scope)
+    return scopes if scopes else list(DEFAULT_SCOPES)
 
 
 def read_client_credentials() -> tuple[str, str]:
@@ -102,9 +141,10 @@ def _decode_response(response: requests.Response) -> dict[str, Any]:
 
 __all__ = [
     "DEFAULT_SCOPES",
+    "SERVICE_SCOPES",
     "exchange_grant_code",
     "print_self_client_instructions",
     "read_client_credentials",
     "refresh_access_token",
+    "scopes_for_services",
 ]
-

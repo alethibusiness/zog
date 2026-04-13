@@ -19,10 +19,10 @@ from zog.config import (
 )
 from zog.output import print_mapping, print_rows
 from zog.providers.zoho.auth import (
-    DEFAULT_SCOPES,
     exchange_grant_code,
     print_self_client_instructions,
     read_client_credentials,
+    scopes_for_services,
 )
 from zog.providers.zoho.client import ZohoClient
 from zog.providers.zoho.mail import get_account
@@ -39,7 +39,8 @@ def handle_add(args) -> int:
     """Add Zoho credentials for an account via grant-code flow."""
 
     client_id, client_secret = read_client_credentials()
-    print_self_client_instructions(DEFAULT_SCOPES)
+    scopes = scopes_for_services(getattr(args, "services", []))
+    print_self_client_instructions(scopes)
     grant_code = input("Grant Code: ").strip()
     payload = exchange_grant_code(
         accounts_url=DEFAULT_ACCOUNTS_URL,
