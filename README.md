@@ -25,35 +25,41 @@ uv pip install -e .[dev]
 
 ## Quickstart
 
-Authorize the admin mailbox:
+Authorize your mailbox:
 
 ```bash
-zog auth add admin@alethiconsulting.com
+zog auth add you@yourdomain.com
 ```
-
-If `/Users/adebimpeomolaso/.config/zoho/admin-credentials.json` exists, `zog` auto-imports it on first command execution for `admin@alethiconsulting.com`.
 
 Search mail:
 
 ```bash
-zog mail search -a admin@alethiconsulting.com "from:cloudflare" --max 3
+zog mail search -a you@yourdomain.com "from:cloudflare" --max 3
 ```
 
 List folders:
 
 ```bash
-zog mail folders -a admin@alethiconsulting.com
+zog mail folders -a you@yourdomain.com
 ```
 
 Dry-run a send:
 
 ```bash
 zog mail send \
-  -a admin@alethiconsulting.com \
-  --to danieladebimpe@gmail.com \
+  -a you@yourdomain.com \
+  --to friend@example.com \
   --subject "zog test" \
   --body "hello from zog" \
   --dry-run
+```
+
+### Importing existing Zoho credentials
+
+If you already have a JSON file with `client_id`, `client_secret`, and `refresh_token` from a previous Zoho Self Client setup, you can import it directly:
+
+```bash
+zog auth import-legacy /path/to/credentials.json
 ```
 
 ## Command Reference
