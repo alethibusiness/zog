@@ -42,9 +42,9 @@ def test_list_calendars(mocker):
         return_value=_response(
             200,
             {
-                "data": [
-                    {"calendarId": "cal1", "name": "Primary", "calendarType": "primary"},
-                    {"calendarId": "cal2", "name": "Work", "calendarType": "personal"},
+                "calendars": [
+                    {"uid": "cal1", "name": "Primary", "calendarType": "primary"},
+                    {"uid": "cal2", "name": "Work", "calendarType": "personal"},
                 ]
             },
         ),
@@ -64,16 +64,16 @@ def test_list_events(mocker):
             _response(
                 200,
                 {
-                    "data": [
-                        {"calendarId": "cal1", "name": "Primary", "calendarType": "primary"},
+                    "calendars": [
+                        {"uid": "cal1", "name": "Primary", "calendarType": "primary"},
                     ]
                 },
             ),
             _response(
                 200,
                 {
-                    "data": [
-                        {"eventId": "evt1", "title": "Meeting", "start": "2026-04-15T10:00:00Z", "end": "2026-04-15T11:00:00Z"},
+                    "events": [
+                        {"uid": "evt1", "title": "Meeting", "dateandtime": {"start": "2026-04-15T10:00:00Z", "end": "2026-04-15T11:00:00Z"}},
                     ]
                 },
             ),
@@ -89,12 +89,24 @@ def test_list_events(mocker):
 def test_get_event(mocker):
     mocker.patch(
         "zog.providers.zoho.client.requests.request",
-        return_value=_response(
-            200,
-            {
-                "data": {"eventId": "evt1", "title": "Standup", "start": "2026-04-15T09:00:00Z", "end": "2026-04-15T09:30:00Z"},
-            },
-        ),
+        side_effect=[
+            _response(
+                200,
+                {
+                    "calendars": [
+                        {"uid": "cal1", "name": "Primary", "calendarType": "primary"},
+                    ]
+                },
+            ),
+            _response(
+                200,
+                {
+                    "events": [
+                        {"uid": "evt1", "title": "Standup", "dateandtime": {"start": "2026-04-15T09:00:00Z", "end": "2026-04-15T09:30:00Z"}},
+                    ]
+                },
+            ),
+        ],
     )
     client = ZohoClient("admin@example.com")
     event = get_event(client, "evt1")
@@ -109,16 +121,17 @@ def test_create_event(mocker):
             _response(
                 200,
                 {
-                    "data": [
-                        {"calendarId": "cal1", "name": "Primary", "calendarType": "primary"},
+                    "calendars": [
+                        {"uid": "cal1", "name": "Primary", "calendarType": "primary", "timezone": "UTC"},
                     ]
                 },
             ),
             _response(
                 200,
                 {
-                    "data": {"eventId": "evt99"},
-                    "status": {"code": 200, "description": "success"},
+                    "events": [
+                        {"uid": "evt99", "title": "Demo", "dateandtime": {"start": "2026-04-15T14:00:00Z", "end": "2026-04-15T15:00:00Z"}},
+                    ]
                 },
             ),
         ],

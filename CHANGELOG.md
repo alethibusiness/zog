@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.2 - 2026-04-13
+
+- Fix Zoho Calendar/Contacts/WorkDrive endpoints; live-tested against admin@alethiconsulting.com.
+
 ## 0.2.1 - 2026-04-13
 
 - Moved repository to `Alethi-Consulting` GitHub organization.

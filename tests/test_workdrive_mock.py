@@ -38,8 +38,8 @@ def test_list_files(mocker):
             200,
             {
                 "data": [
-                    {"id": "f1", "name": "Report.pdf", "type": "file"},
-                    {"id": "f2", "name": "Docs", "type": "folder"},
+                    {"id": "f1", "attributes": {"name": "Report.pdf", "type": "file"}},
+                    {"id": "f2", "attributes": {"name": "Docs", "type": "folder"}},
                 ]
             },
         ),
@@ -58,7 +58,7 @@ def test_get_file(mocker):
         return_value=_response(
             200,
             {
-                "data": {"id": "f1", "name": "Report.pdf", "type": "file"},
+                "data": {"id": "f1", "attributes": {"name": "Report.pdf", "type": "file"}},
             },
         ),
     )
@@ -68,8 +68,8 @@ def test_get_file(mocker):
     assert file_info["name"] == "Report.pdf"
 
 
-def test_upload_file_stub_raises():
+def test_upload_file_requires_folder():
     client = ZohoClient("admin@example.com")
-    with pytest.raises(NotImplementedError) as exc_info:
+    with pytest.raises(RuntimeError) as exc_info:
         upload_file(client, "/tmp/foo.txt")
-    assert "not yet implemented" in str(exc_info.value)
+    assert "requires a --folder ID" in str(exc_info.value)

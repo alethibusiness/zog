@@ -37,9 +37,9 @@ def test_list_contacts(mocker):
         return_value=_response(
             200,
             {
-                "data": [
-                    {"contactId": "c1", "firstName": "Alice", "lastName": "Smith", "email": [{"email": "alice@example.com"}], "phone": [{"phone": "555-1234"}], "company": "Acme"},
-                    {"contactId": "c2", "firstName": "Bob", "lastName": "Jones", "email": [{"email": "bob@example.com"}]},
+                "contacts": [
+                    {"contact_id": "c1", "first_name": "Alice", "last_name": "Smith", "emails": [{"email_id": "alice@example.com"}], "phones": [{"number": "555-1234", "type": "mobile"}], "company": "Acme"},
+                    {"contact_id": "c2", "first_name": "Bob", "last_name": "Jones", "emails": [{"email_id": "bob@example.com"}]},
                 ]
             },
         ),
@@ -60,7 +60,7 @@ def test_get_contact(mocker):
         return_value=_response(
             200,
             {
-                "data": {"contactId": "c1", "firstName": "Alice", "lastName": "Smith", "email": [{"email": "alice@example.com"}]},
+                "contacts": {"contact_id": "c1", "first_name": "Alice", "last_name": "Smith", "emails": [{"email_id": "alice@example.com"}]},
             },
         ),
     )
@@ -77,7 +77,7 @@ def test_create_contact(mocker):
         return_value=_response(
             200,
             {
-                "data": {"contactId": "c99"},
+                "contacts": {"contact_id": "c99"},
                 "status": {"code": 200, "description": "success"},
             },
         ),

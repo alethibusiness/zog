@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from zog.providers.zoho.client import ZohoClient
@@ -13,21 +15,67 @@ def _endpoint(path: str) -> str:
     return f"{CALENDAR_API_URL.rstrip('/')}/{path.lstrip('/')}"
 
 
+def _default_calendar(client: ZohoClient) -> dict[str, Any]:
+    """Return the default (or first) calendar."""
+    calendars = list_calendars(client)
+    if not calendars:
+        raise RuntimeError("No calendars available.")
+    return calendars[0]
+
+
+def _calendar_uid(calendar_id: str | None, client: ZohoClient) -> str:
+    """Resolve a calendar identifier to its UID."""
+    if calendar_id:
+        return calendar_id
+    return _default_calendar(client)["uid"]
+
+
 def list_calendars(client: ZohoClient) -> list[dict[str, Any]]:
     """Return normalized calendars for the active account."""
 
     response = client.get(_endpoint("calendars"))
     calendars = []
-    for raw in response.get("data", []) or []:
+    for raw in response.get("calendars", []) or response.get("data", []) or []:
+        uid = str(raw.get("uid", raw.get("id", "")))
         calendars.append(
             {
-                "id": str(raw.get("calendarId", raw.get("uid", ""))),
+                "id": uid,
+                "uid": uid,
                 "name": str(raw.get("name", "")),
-                "type": str(raw.get("calendarType", "")),
+                "type": str(raw.get("calendarType", raw.get("type", ""))),
                 "raw": raw,
             }
         )
     return calendars
+
+
+def _fmt_date(value: str | None) -> str | None:
+    if not value:
+        return None
+    value = value.strip()
+    if len(value) == 8 and value.isdigit():
+        return value
+    if len(value) >= 8 and value[:8].isdigit():
+        # yyyyMMddTHHMMSSZ or similar – truncate to date portion
+        return value[:8]
+    try:
+        dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        return dt.strftime("%Y%m%d")
+    except ValueError:
+        pass
+    return value
+
+
+def _build_range(start: str | None, end: str | None) -> str:
+    if start:
+        s = _fmt_date(start)
+    else:
+        s = datetime.now(timezone.utc).strftime("%Y%m%d")
+    if end:
+        e = _fmt_date(end)
+    else:
+        e = (datetime.strptime(s, "%Y%m%d") + timedelta(days=30)).strftime("%Y%m%d")
+    return json.dumps({"start": s, "end": e})
 
 
 def list_events(
@@ -40,30 +88,30 @@ def list_events(
 ) -> list[dict[str, Any]]:
     """Return normalized events for the selected calendar."""
 
-    if calendar_id is None:
-        calendars = list_calendars(client)
-        if not calendars:
-            return []
-        calendar_id = calendars[0]["id"]
-
-    params: dict[str, Any] = {"limit": max(limit, 1)}
-    if start:
-        params["startDate"] = start
-    if end:
-        params["endDate"] = end
-
-    response = client.get(_endpoint(f"calendars/{calendar_id}/events"), params=params)
+    uid = _calendar_uid(calendar_id, client)
+    range_param = _build_range(start, end)
+    response = client.get(
+        _endpoint(f"calendars/{uid}/events"),
+        params={"range": range_param},
+    )
     events = []
-    for raw in response.get("data", []) or []:
-        events.append(_normalize_event(raw))
+    for raw in response.get("events", []) or response.get("data", []) or []:
+        if isinstance(raw, dict) and ("uid" in raw or "eventId" in raw or "id" in raw):
+            events.append(_normalize_event(raw))
     return events[:limit]
 
 
 def get_event(client: ZohoClient, event_id: str) -> dict[str, Any]:
     """Fetch a single event by ID."""
 
-    response = client.get(_endpoint(f"events/{event_id}"))
-    return _normalize_event(response.get("data", {}) or {})
+    uid = _calendar_uid(None, client)
+    response = client.get(_endpoint(f"calendars/{uid}/events/{event_id}"))
+    events = response.get("events", []) or response.get("data", []) or []
+    if events and isinstance(events, list):
+        return _normalize_event(events[0])
+    if isinstance(events, dict):
+        return _normalize_event(events)
+    return _normalize_event(response)
 
 
 def create_event(
@@ -79,28 +127,49 @@ def create_event(
 ) -> dict[str, Any]:
     """Create an event in the selected calendar."""
 
-    if calendar_id is None:
-        calendars = list_calendars(client)
-        if not calendars:
-            raise RuntimeError("No calendars available.")
-        calendar_id = calendars[0]["id"]
+    if calendar_id:
+        uid = calendar_id
+        tz = "UTC"
+    else:
+        cal = _default_calendar(client)
+        uid = cal["uid"]
+        tz = cal.get("raw", {}).get("timezone") or tz
+
+    def _fmt_datetime(value: str) -> str:
+        try:
+            dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+            return dt.strftime("%Y%m%dT%H%M%SZ")
+        except ValueError:
+            return value
 
     payload: dict[str, Any] = {
         "title": title,
-        "start": start,
-        "end": end,
+        "dateandtime": {
+            "start": _fmt_datetime(start),
+            "end": _fmt_datetime(end),
+            "timezone": tz,
+        },
     }
     if description:
         payload["description"] = description
     if location:
         payload["location"] = location
     if attendees:
-        payload["attendees"] = [{"email": email} for email in attendees]
+        payload["attendees"] = [{"email": email, "status": "NEEDS-ACTION"} for email in attendees]
 
-    response = client.post(_endpoint(f"calendars/{calendar_id}/events"), json_body=payload)
-    data = response.get("data", {}) or {}
+    response = client.post(
+        _endpoint(f"calendars/{uid}/events"),
+        data={"eventdata": json.dumps(payload)},
+    )
+    events = response.get("events", []) or response.get("data", []) or []
+    if events and isinstance(events, list):
+        data = events[0]
+    elif isinstance(events, dict):
+        data = events
+    else:
+        data = response
     return {
-        "eventId": str(data.get("eventId", "")),
+        "eventId": str(data.get("eventId", data.get("uid", ""))),
         "title": title,
         "start": start,
         "end": end,
@@ -109,11 +178,12 @@ def create_event(
 
 
 def _normalize_event(raw: dict[str, Any]) -> dict[str, Any]:
+    dt = raw.get("dateandtime", {})
     return {
-        "eventId": str(raw.get("eventId", raw.get("uid", ""))),
+        "eventId": str(raw.get("eventId", raw.get("uid", raw.get("id", "")))),
         "title": str(raw.get("title", "")),
-        "start": str(raw.get("start", "")),
-        "end": str(raw.get("end", "")),
+        "start": str(dt.get("start", raw.get("start", ""))),
+        "end": str(dt.get("end", raw.get("end", ""))),
         "location": str(raw.get("location", "")),
         "description": str(raw.get("description", "")),
         "raw": raw,

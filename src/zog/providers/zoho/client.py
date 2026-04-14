@@ -22,11 +22,19 @@ class ZohoClient:
         self.email = email
         self.verbose = verbose
 
-    def get(self, url: str, *, params: dict[str, Any] | None = None) -> dict[str, Any]:
-        return self.request("GET", url, params=params)
+    def get(self, url: str, *, params: dict[str, Any] | None = None, headers: dict[str, str] | None = None) -> dict[str, Any]:
+        return self.request("GET", url, params=params, headers=headers)
 
-    def post(self, url: str, *, json_body: dict[str, Any] | None = None) -> dict[str, Any]:
-        return self.request("POST", url, json_body=json_body)
+    def post(
+        self,
+        url: str,
+        *,
+        json_body: dict[str, Any] | None = None,
+        data: bytes | dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
+        params: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        return self.request("POST", url, json_body=json_body, data=data, headers=headers, params=params)
 
     def request(
         self,
@@ -35,12 +43,16 @@ class ZohoClient:
         *,
         params: dict[str, Any] | None = None,
         json_body: dict[str, Any] | None = None,
+        data: bytes | dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
         retry_on_auth_error: bool = True,
     ) -> dict[str, Any]:
         """Perform an authenticated API request."""
 
         token = self._ensure_access_token(load_account_token(self.email))
-        response = self._perform_request(method, url, token.access_token or "", params=params, json_body=json_body)
+        response = self._perform_request(
+            method, url, token.access_token or "", params=params, json_body=json_body, data=data, headers=headers
+        )
         if response.status_code == 401 and retry_on_auth_error and self._is_invalid_oauth_token(response):
             LOGGER.debug("Zoho access token expired for %s; refreshing and retrying once.", self.email)
             token = refresh_access_token(token)
@@ -51,6 +63,8 @@ class ZohoClient:
                 token.access_token or "",
                 params=params,
                 json_body=json_body,
+                data=data,
+                headers=headers,
             )
         payload = self._decode_payload(response)
         self._raise_for_error(response, payload)
@@ -72,15 +86,21 @@ class ZohoClient:
         *,
         params: dict[str, Any] | None,
         json_body: dict[str, Any] | None,
+        data: bytes | dict[str, Any] | None,
+        headers: dict[str, str] | None,
     ) -> requests.Response:
         if self.verbose:
             LOGGER.debug("%s %s params=%s", method.upper(), url, params)
+        merged_headers = {"Authorization": f"Zoho-oauthtoken {access_token}"}
+        if headers:
+            merged_headers.update(headers)
         return requests.request(
             method.upper(),
             url,
-            headers={"Authorization": f"Zoho-oauthtoken {access_token}"},
+            headers=merged_headers,
             params=params,
             json=json_body,
+            data=data,
             timeout=30,
         )
 
