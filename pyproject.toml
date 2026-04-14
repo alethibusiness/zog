@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "zog-cli"
-version = "0.2.0"
+version = "0.2.1"
 description = "Zoho Mail CLI modeled after gog."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -39,9 +39,9 @@ dev = [
 zog = "zog.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/alethibusiness/zog"
-Repository = "https://github.com/alethibusiness/zog"
-Issues = "https://github.com/alethibusiness/zog/issues"
+Homepage = "https://github.com/Alethi-Consulting/zog"
+Repository = "https://github.com/Alethi-Consulting/zog"
+Issues = "https://github.com/Alethi-Consulting/zog/issues"
 
 [tool.setuptools]
 package-dir = { "" = "src" }

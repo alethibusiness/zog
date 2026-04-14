@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1 - 2026-04-13
+
+- Moved repository to `Alethi-Consulting` GitHub organization.
+- Updated project URLs in packaging metadata.
+
 ## 0.2.0 - 2026-04-13
 
 - Added `zog calendar` subcommands: `list`, `events list`, `events get`, `events create`.
