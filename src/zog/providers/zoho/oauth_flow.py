@@ -153,7 +153,9 @@ def run_loopback_flow(
     if port is None:
         port = _pick_free_port()
 
-    redirect_uri = f"http://localhost:{port}/callback"
+    # Use 127.0.0.1 (not localhost) to avoid IPv6 (::1) resolution sending the
+    # browser to a different process on the same port.
+    redirect_uri = f"http://127.0.0.1:{port}/callback"
     auth_url = _build_auth_url(client_id, scopes, redirect_uri=redirect_uri)
 
     code_event = threading.Event()

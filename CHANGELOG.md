@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.1 - 2026-04-14
+
+- Fix: loopback callback now uses `http://127.0.0.1:<port>/callback` instead of `http://localhost:<port>/callback`. On systems where `localhost` resolves to IPv6 first, the browser could hit an unrelated process on the same port and receive a 404. Using the IPv4 literal avoids that entirely.
+
 ## 0.3.0 - 2026-04-14
 
 - Replaced Self Client flow with OAuth 2.0 Authorization Code flow (local loopback by default, OOB fallback).
