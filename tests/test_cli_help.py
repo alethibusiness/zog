@@ -79,5 +79,7 @@ def test_auth_add_help_exits_successfully(capsys):
         main(["auth", "add", "--help"])
     assert exc_info.value.code == 0
     output = capsys.readouterr().out
-    assert "--device" in output
     assert "--self-client" in output
+    assert "--oob" in output
+    assert "--no-browser" in output
+    assert "--port" in output

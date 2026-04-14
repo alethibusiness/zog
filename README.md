@@ -30,7 +30,13 @@ pipx install zog-cli
 zog auth add me@example.com
 ```
 
-Visit the URL zog prints, enter the code, click Allow. Done.
+This opens your browser to authorize zog. After you click Allow, the CLI captures the authorization callback automatically and stores your tokens locally.
+
+For headless servers or SSH sessions without port forwarding, use the out-of-band flow:
+
+```bash
+zog auth add me@example.com --no-browser
+```
 
 For power users who want to use their own Zoho app, use `--self-client`.
 
@@ -76,7 +82,7 @@ zog auth import-legacy /path/to/credentials.json
 ## Command Reference
 
 ```text
-zog auth add <email> [--services mail]
+zog auth add <email> [--services mail] [--no-browser] [--port N]
 zog auth list
 zog auth remove <email>
 zog auth import-legacy <path>
@@ -107,7 +113,7 @@ Global flags follow gog-style conventions:
 
 ## OAuth Setup
 
-By default `zog auth add` uses Zoho's OAuth 2.0 Device Flow, so no manual Self Client setup is required. If you prefer to use your own Zoho app, use the `--self-client` flag:
+By default `zog auth add` uses Zoho's OAuth 2.0 Authorization Code flow with a local loopback server, so no manual Self Client setup is required. If you prefer to use your own Zoho app, use the `--self-client` flag:
 
 ```bash
 zog auth add you@yourdomain.com --self-client

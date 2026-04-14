@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import sys
 import time
-import webbrowser
 from pathlib import Path
 
 from zog.config import (
@@ -13,7 +12,6 @@ from zog.config import (
     StoredToken,
     import_legacy_credentials,
     list_account_emails,
-    load_config,
     load_account_token,
     remove_account_token,
     save_account_token,
@@ -21,7 +19,7 @@ from zog.config import (
 )
 from zog.errors import AuthError
 from zog.output import print_mapping, print_rows
-from zog.providers.zoho.app import get_client_id
+from zog.providers.zoho.app import get_client_id, get_client_secret
 from zog.providers.zoho.auth import (
     exchange_grant_code,
     print_self_client_instructions,
@@ -29,12 +27,12 @@ from zog.providers.zoho.auth import (
     scopes_for_services,
 )
 from zog.providers.zoho.client import ZohoClient
-from zog.providers.zoho.device_flow import (
-    ZohoDeviceFlowError,
-    initiate_device_flow,
-    poll_for_token,
-)
 from zog.providers.zoho.mail import get_account
+from zog.providers.zoho.oauth_flow import (
+    ZohoOAuthFlowError,
+    run_loopback_flow,
+    run_oob_flow,
+)
 
 AUTH_COLUMNS = [
     ("EMAIL", "email"),
@@ -48,107 +46,76 @@ def handle_add(args) -> int:
     """Add Zoho credentials for an account."""
 
     scopes = scopes_for_services(getattr(args, "services", []))
-    auth_method = "self_client" if getattr(args, "self_client", False) else "device_flow"
 
-    if auth_method == "device_flow":
-        return _handle_add_device_flow(args, scopes)
-    return _handle_add_self_client(args, scopes)
+    if getattr(args, "self_client", False):
+        return _handle_add_self_client(args, scopes)
+
+    if getattr(args, "oob", False) or getattr(args, "no_browser", False):
+        return _handle_add_oob(args, scopes)
+
+    return _handle_add_loopback(args, scopes)
 
 
-def _handle_add_device_flow(args, scopes: list[str]) -> int:
+def _handle_add_loopback(args, scopes: list[str]) -> int:
     client_id = getattr(args, "client_id", None) or get_client_id()
+    client_secret = get_client_secret()
+    if not client_secret:
+        print("Error: No client secret available.", file=sys.stderr)
+        return 1
 
-    print("Requesting device authorization from Zoho...")
+    port = getattr(args, "port", None)
+    open_browser = not getattr(args, "no_browser", False)
+
+    print("Opening browser...", flush=True)
     try:
-        device_info = initiate_device_flow(
+        print("Waiting for authorization...", flush=True)
+        payload = run_loopback_flow(
             client_id=client_id,
+            client_secret=client_secret,
             scopes=scopes,
-            accounts_url=DEFAULT_ACCOUNTS_URL,
+            port=port,
+            open_browser=open_browser,
         )
-    except ZohoDeviceFlowError as exc:
+    except ZohoOAuthFlowError as exc:
+        err_msg = str(exc)
+        if "Unable to bind" in err_msg or "None of the local ports" in err_msg:
+            print(
+                f"Local callback server unavailable ({err_msg}). Falling back to out-of-band flow.\n",
+                file=sys.stderr,
+            )
+            return _handle_add_oob(args, scopes)
         print(f"Error: {exc}", file=sys.stderr)
-        print(
-            "Device flow is unavailable right now. Use `zog auth add <email> --self-client` to authenticate with a Zoho Self Client instead.",
-            file=sys.stderr,
-        )
         return 1
-    except Exception as exc:
-        print(f"Error: {exc}", file=sys.stderr)
-        print(
-            "Device flow is unavailable right now. Use `zog auth add <email> --self-client` to authenticate with a Zoho Self Client instead.",
-            file=sys.stderr,
-        )
+    except KeyboardInterrupt:
+        print("\nInterrupted.", file=sys.stderr)
+        return 130
+
+    print("Authorized.")
+    return _save_token_and_finish(args, payload, client_id, client_secret, "oauth_code")
+
+
+def _handle_add_oob(args, scopes: list[str]) -> int:
+    client_id = getattr(args, "client_id", None) or get_client_id()
+    client_secret = get_client_secret()
+    if not client_secret:
+        print("Error: No client secret available.", file=sys.stderr)
         return 1
-
-    user_code = device_info.get("user_code", "")
-    verification_uri = device_info.get("verification_uri", "")
-    verification_uri_complete = device_info.get("verification_uri_complete", "")
-    device_code = device_info.get("device_code", "")
-    interval = int(device_info.get("interval", 5))
-    expires_in = int(device_info.get("expires_in", 600))
-
-    print(f"To authorize zog, visit: {verification_uri}")
-    print(f"Enter code: {user_code}")
-    if verification_uri_complete:
-        print(f"(or open the pre-filled link: {verification_uri_complete})")
-
-    if getattr(args, "open_browser", False) and sys.stdin.isatty() and verification_uri_complete:
-        try:
-            webbrowser.open(verification_uri_complete)
-        except Exception:
-            pass
-
-    expires_min = expires_in // 60
-    print(f"\nWaiting for authorization (expires in {expires_min} min)...", end="", flush=True)
 
     try:
-        payload = poll_for_token(
+        payload = run_oob_flow(
             client_id=client_id,
-            device_code=device_code,
-            interval=interval,
-            expires_in=expires_in,
-            accounts_url=DEFAULT_ACCOUNTS_URL,
+            client_secret=client_secret,
+            scopes=scopes,
         )
-    except ZohoDeviceFlowError as exc:
-        print()
+    except ZohoOAuthFlowError as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
+    except KeyboardInterrupt:
+        print("\nInterrupted.", file=sys.stderr)
+        return 130
 
-    print(" ✓")
-
-    token = StoredToken.from_mapping(
-        {
-            "auth_method": "device_flow",
-            "client_id": client_id,
-            "refresh_token": payload["refresh_token"],
-            "access_token": payload.get("access_token"),
-            "access_token_expires_at": (
-                int(time.time()) + max(int(payload.get("expires_in", 3600)) - 60, 0)
-                if payload.get("access_token")
-                else None
-            ),
-            "scope": payload.get("scope"),
-            "api_url": DEFAULT_API_URL,
-            "accounts_url": DEFAULT_ACCOUNTS_URL,
-        }
-    )
-    save_account_token(args.email, token)
-    client = ZohoClient(args.email, verbose=args.verbose)
-    account = get_account(client)
-    stored = load_account_token(args.email)
-    stored.account_id = str(account["accountId"])
-    save_account_token(args.email, stored)
-    set_default_account(args.email)
-    print_mapping(
-        {
-            "email": args.email,
-            "accountId": str(account["accountId"]),
-            "status": "added",
-        },
-        args,
-        fields=[("EMAIL", "email"), ("ACCOUNT_ID", "accountId"), ("STATUS", "status")],
-    )
-    return 0
+    print("Authorized.")
+    return _save_token_and_finish(args, payload, client_id, client_secret, "oauth_code")
 
 
 def _handle_add_self_client(args, scopes: list[str]) -> int:
@@ -157,15 +124,29 @@ def _handle_add_self_client(args, scopes: list[str]) -> int:
         client_id = args.client_id
     print_self_client_instructions(scopes)
     grant_code = input("Grant Code: ").strip()
-    payload = exchange_grant_code(
-        accounts_url=DEFAULT_ACCOUNTS_URL,
-        client_id=client_id,
-        client_secret=client_secret,
-        grant_code=grant_code,
-    )
+    try:
+        payload = exchange_grant_code(
+            accounts_url=DEFAULT_ACCOUNTS_URL,
+            client_id=client_id,
+            client_secret=client_secret,
+            grant_code=grant_code,
+        )
+    except AuthError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+    return _save_token_and_finish(args, payload, client_id, client_secret, "self_client")
+
+
+def _save_token_and_finish(
+    args,
+    payload: dict,
+    client_id: str,
+    client_secret: str | None,
+    auth_method: str,
+) -> int:
     token = StoredToken.from_mapping(
         {
-            "auth_method": "self_client",
+            "auth_method": auth_method,
             "client_id": client_id,
             "client_secret": client_secret,
             "refresh_token": payload["refresh_token"],

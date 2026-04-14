@@ -2,11 +2,12 @@
 
 ## 0.3.0 - 2026-04-14
 
-- Added OAuth Device Flow support. `zog auth add` now defaults to a one-click browser authorization (no Self Client setup required).
-- Added `--device` flag (default) and `--self-client` escape hatch.
-- Added `ZOG_CLIENT_ID` env var and `--client-id` flag for overrides.
-- Refresh tokens from device flow no longer require a client_secret.
-- Added mock-based tests for device flow.
+- Replaced Self Client flow with OAuth 2.0 Authorization Code flow (local loopback by default, OOB fallback).
+- `zog auth add` opens a browser and waits for the authorization callback on localhost — no manual code entry needed.
+- `--no-browser` / `--oob` prints the URL and prompts for the code (for SSH / headless environments).
+- `--self-client` preserves the original flow for power users who want their own Zoho app.
+- Refreshing tokens now uses the embedded client credentials by default.
+- Removed the experimental device_flow module (Zoho doesn't implement RFC 8628).
 
 ## 0.2.2 - 2026-04-13
 
