@@ -13,3 +13,4 @@ dist/
 *.log
 .mypy_cache/
 .ruff_cache/
+.kimi-prompt-*.txt
