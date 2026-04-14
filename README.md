@@ -25,6 +25,17 @@ uv pip install -e .[dev]
 
 ## Quickstart
 
+```bash
+pipx install zog-cli
+zog auth add me@example.com
+```
+
+Visit the URL zog prints, enter the code, click Allow. Done.
+
+For power users who want to use their own Zoho app, use `--self-client`.
+
+## Usage
+
 Authorize your mailbox:
 
 ```bash
@@ -96,7 +107,13 @@ Global flags follow gog-style conventions:
 
 ## OAuth Setup
 
-`zog auth add` uses Zoho's Self Client flow. Create or select a Self Client in the Zoho API Console:
+By default `zog auth add` uses Zoho's OAuth 2.0 Device Flow, so no manual Self Client setup is required. If you prefer to use your own Zoho app, use the `--self-client` flag:
+
+```bash
+zog auth add you@yourdomain.com --self-client
+```
+
+Then create or select a Self Client in the Zoho API Console:
 
 <https://api-console.zoho.com/>
 

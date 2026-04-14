@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0 - 2026-04-14
+
+- Added OAuth Device Flow support. `zog auth add` now defaults to a one-click browser authorization (no Self Client setup required).
+- Added `--device` flag (default) and `--self-client` escape hatch.
+- Added `ZOG_CLIENT_ID` env var and `--client-id` flag for overrides.
+- Refresh tokens from device flow no longer require a client_secret.
+- Added mock-based tests for device flow.
+
 ## 0.2.2 - 2026-04-13
 
 - Fix Zoho Calendar/Contacts/WorkDrive endpoints; live-tested against admin@alethiconsulting.com.

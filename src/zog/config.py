@@ -38,11 +38,12 @@ class StoredToken:
     """Serialized Zoho credential bundle."""
 
     client_id: str
-    client_secret: str
     refresh_token: str
+    client_secret: str | None = None
     access_token: str | None = None
     access_token_expires_at: int | None = None
     scopes: list[str] = field(default_factory=list)
+    auth_method: str | None = None
     org_id: str | None = None
     account_id: str | None = None
     api_url: str = DEFAULT_API_URL
@@ -57,11 +58,12 @@ class StoredToken:
             scopes = [str(item) for item in scopes_value]
         return cls(
             client_id=str(data["client_id"]),
-            client_secret=str(data["client_secret"]),
+            client_secret=data.get("client_secret"),
             refresh_token=str(data["refresh_token"]),
             access_token=data.get("access_token"),
             access_token_expires_at=_optional_int(data.get("access_token_expires_at")),
             scopes=scopes,
+            auth_method=_optional_str(data.get("auth_method")),
             org_id=_optional_str(data.get("org_id")),
             account_id=_optional_str(data.get("account_id")),
             api_url=str(data.get("api_url") or DEFAULT_API_URL),
@@ -69,18 +71,23 @@ class StoredToken:
         )
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        result: dict[str, Any] = {
             "client_id": self.client_id,
-            "client_secret": self.client_secret,
             "refresh_token": self.refresh_token,
             "access_token": self.access_token,
             "access_token_expires_at": self.access_token_expires_at,
             "scopes": self.scopes,
-            "org_id": self.org_id,
             "account_id": self.account_id,
             "api_url": self.api_url,
             "accounts_url": self.accounts_url,
         }
+        if self.client_secret is not None:
+            result["client_secret"] = self.client_secret
+        if self.auth_method is not None:
+            result["auth_method"] = self.auth_method
+        if self.org_id is not None:
+            result["org_id"] = self.org_id
+        return result
 
 
 @dataclass(frozen=True, slots=True)

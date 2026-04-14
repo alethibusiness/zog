@@ -108,14 +108,16 @@ def exchange_grant_code(
 def refresh_access_token(token: StoredToken) -> StoredToken:
     """Refresh a Zoho access token from a refresh token."""
 
+    data: dict[str, str] = {
+        "refresh_token": token.refresh_token,
+        "client_id": token.client_id,
+        "grant_type": "refresh_token",
+    }
+    if token.client_secret:
+        data["client_secret"] = token.client_secret
     response = requests.post(
         endpoints.oauth_token(token.accounts_url),
-        data={
-            "refresh_token": token.refresh_token,
-            "client_id": token.client_id,
-            "client_secret": token.client_secret,
-            "grant_type": "refresh_token",
-        },
+        data=data,
         timeout=30,
     )
     payload = _decode_response(response)

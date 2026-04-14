@@ -39,6 +39,27 @@ def build_parser() -> argparse.ArgumentParser:
         default="mail,calendar,contacts,workdrive",
         help="Comma-separated services to authorize (mail,calendar,contacts,workdrive).",
     )
+    auth_add.add_argument(
+        "--device",
+        action="store_true",
+        help="Use OAuth 2.0 Device Flow (default).",
+    )
+    auth_add.add_argument(
+        "--self-client",
+        action="store_true",
+        help="Use Self Client grant-code flow instead of device flow.",
+    )
+    auth_add.add_argument(
+        "--client-id",
+        dest="client_id",
+        help="Override the default OAuth client ID.",
+    )
+    auth_add.add_argument(
+        "--open",
+        dest="open_browser",
+        action="store_true",
+        help="Open the verification URL in a web browser (TTY only).",
+    )
     auth_add.set_defaults(func=auth_commands.handle_add)
 
     auth_list = auth_subparsers.add_parser("list", help="List stored accounts.", parents=[globals_parent])
